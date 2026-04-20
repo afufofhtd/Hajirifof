@@ -126,32 +126,57 @@ function enableLocation() {
   const tooltip = document.getElementById("tooltipBox");
 
   if (!navigator.geolocation) {
-    alert("Geolocation not supported");
+    alert("❌ Your browser does not support location services.");
     return;
   }
 
-  document.getElementById("status").innerText = "Checking location...";
+  document.getElementById("status").innerText = "📍 Requesting location access...";
 
-  navigator.geolocation.getCurrentPosition(position => {
-    currentLat = position.coords.latitude;
-    currentLon = position.coords.longitude;
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      currentLat = position.coords.latitude;
+      currentLon = position.coords.longitude;
 
-    const distance = getDistance(currentLat, currentLon, TARGET_LAT, TARGET_LON);
+      const distance = getDistance(currentLat, currentLon, TARGET_LAT, TARGET_LON);
 
-    if (distance <= RADIUS) {
-      document.getElementById("status").innerText = "✅ Within attendance zone";
-      document.getElementById("submitBtn").disabled = false;
-      tooltip.classList.remove("show");
-    } else {
-      document.getElementById("status").innerText = "❌ Outside allowed area";
-      document.getElementById("submitBtn").disabled = true;
-      tooltip.classList.add("show");
+      if (distance <= RADIUS) {
+        document.getElementById("status").innerText = "✅ Within attendance zone";
+        document.getElementById("submitBtn").disabled = false;
+        tooltip.classList.remove("show");
+      } else {
+        document.getElementById("status").innerText = "❌ Outside allowed area";
+        document.getElementById("submitBtn").disabled = true;
+        tooltip.classList.add("show");
+      }
+    },
+
+    function(error) {
+      let message = "";
+
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          message = "❌ Location permission denied. Please allow it.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          message = "❌ Location unavailable. Turn on GPS.";
+          break;
+        case error.TIMEOUT:
+          message = "❌ Location request timed out.";
+          break;
+        default:
+          message = "❌ Unknown location error.";
+      }
+
+      document.getElementById("status").innerText = message;
+      alert(message);
+    },
+
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
     }
-
-  }, () => {
-    alert("Location permission denied!");
-    document.getElementById("status").innerText = "❌ Location required";
-  });
+  );
 }
 
 // Submit form
