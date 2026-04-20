@@ -1,46 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Attendance System</title>
+  <title>FOF Attendance System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin-top: 40px;
+    }
+    input {
+      padding: 8px;
+      margin: 5px;
+      width: 200px;
+    }
+    button {
+      padding: 10px 20px;
+      background: green;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: grey;
+    }
+  </style>
 </head>
 
 <body>
-<h2>Attendance Form</h2>
 
-<p id="status">Checking location...</p>
+<h2>Faculty of Forestry Attendance</h2>
+
+<p id="status">⚠ Please enable location access</p>
 
 <form id="form">
-  Name: <input type="text" id="name" required><br><br>
-  Semester: <input type="text" id="semester" required><br><br>
-  Subject: <input type="text" id="subject" required><br><br>
+  <input type="text" id="name" placeholder="Name" required><br>
+  <input type="text" id="semester" placeholder="Semester" required><br>
+  <input type="text" id="subject" placeholder="Subject" required><br><br>
 
-  <button type="submit" id="submitBtn" disabled>Submit</button>
+  <button type="submit" id="submitBtn" disabled>Submit Attendance</button>
 </form>
 
 <script>
 const TARGET_LAT = 27.41;
-const TARGET_LON = 85.03;
+const TARGET_LON = 85.32;
 const RADIUS = 100; // meters
 
-const scriptURL = "PASTE_YOUR_SCRIPT_URL";
+const scriptURL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
 
+// distance formula
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2-lat1) * Math.PI/180;
   const dLon = (lon2-lon1) * Math.PI/180;
 
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+  const a = Math.sin(dLat/2)**2 +
             Math.cos(lat1*Math.PI/180) *
             Math.cos(lat2*Math.PI/180) *
-            Math.sin(dLon/2) *
-            Math.sin(dLon/2);
+            Math.sin(dLon/2)**2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// LOCATION CHECK
+// REQUIRE LOCATION
+if (!navigator.geolocation) {
+  alert("Location not supported");
+}
+
+// CHECK LOCATION
 navigator.geolocation.getCurrentPosition(position => {
   const lat = position.coords.latitude;
   const lon = position.coords.longitude;
@@ -48,14 +76,17 @@ navigator.geolocation.getCurrentPosition(position => {
   const distance = getDistance(lat, lon, TARGET_LAT, TARGET_LON);
 
   if (distance <= RADIUS) {
-    document.getElementById("status").innerText = "Within allowed range";
+    document.getElementById("status").innerText = "✅ Within attendance zone";
     document.getElementById("submitBtn").disabled = false;
   } else {
-    document.getElementById("status").innerText = "Outside allowed area";
+    document.getElementById("status").innerText = "❌ You are outside allowed area";
   }
+
+}, () => {
+  alert("Location access is required!");
 });
 
-// FORM SUBMIT
+// SUBMIT FORM
 document.getElementById("form").addEventListener("submit", function(e) {
   e.preventDefault();
 
@@ -66,9 +97,7 @@ document.getElementById("form").addEventListener("submit", function(e) {
     semester: document.getElementById("semester").value,
     subject: document.getElementById("subject").value,
     date: now.toLocaleDateString(),
-    time: now.toLocaleTimeString(),
-    lat: null,
-    lon: null
+    time: now.toLocaleTimeString()
   };
 
   navigator.geolocation.getCurrentPosition(position => {
@@ -82,12 +111,13 @@ document.getElementById("form").addEventListener("submit", function(e) {
     .then(res => res.text())
     .then(response => {
       if (response === "DUPLICATE") {
-        alert("Already submitted within 40 minutes");
+        alert("⚠ Already marked within 40 minutes");
       } else {
-        alert("Attendance submitted");
+        alert("✅ Attendance Submitted");
         document.getElementById("form").reset();
       }
     });
+
   });
 });
 </script>
