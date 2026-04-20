@@ -10,11 +10,13 @@
       text-align: center;
       margin-top: 40px;
     }
+
     input {
       padding: 8px;
       margin: 5px;
-      width: 200px;
+      width: 220px;
     }
+
     button {
       padding: 10px 20px;
       margin: 5px;
@@ -23,8 +25,51 @@
       border: none;
       cursor: pointer;
     }
+
     button:disabled {
       background: grey;
+      cursor: not-allowed;
+    }
+
+    /* Tooltip balloon */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 260px;
+      background-color: #ff4d4d;
+      color: #fff;
+      text-align: center;
+      padding: 8px;
+      border-radius: 6px;
+
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #ff4d4d transparent transparent transparent;
+    }
+
+    .tooltip.show .tooltiptext {
+      visibility: visible;
+      opacity: 1;
     }
   </style>
 </head>
@@ -35,28 +80,34 @@
 
 <p id="status">⚠ Click "Enable Location" to continue</p>
 
-<!-- NEW BUTTON -->
 <button onclick="enableLocation()">Enable Location</button>
+
+<br><br>
 
 <form id="form">
   <input type="text" id="name" placeholder="Name" required><br>
   <input type="text" id="semester" placeholder="Semester" required><br>
   <input type="text" id="subject" placeholder="Subject" required><br><br>
 
-  <button type="submit" id="submitBtn" disabled>Submit Attendance</button>
+  <div class="tooltip" id="tooltipBox">
+    <button type="submit" id="submitBtn" disabled>Submit Attendance</button>
+    <span class="tooltiptext">
+      You cannot register your attendance when outside campus area
+    </span>
+  </div>
 </form>
 
 <script>
 const TARGET_LAT = 27.41;
-const TARGET_LON = 85.03;
+const TARGET_LON = 85.029;
 const RADIUS = 100;
 
-const scriptURL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
+const scriptURL = https://script.google.com/a/macros/afu.edu.np/s/AKfycbzCJwp_FRwrvCPrBbqVXnvHTKxYxGVMugTDCOQA7Eb6v-MkVd2pq0cyVADedjbf3qFu/exec;
 
 let currentLat = null;
 let currentLon = null;
 
-// distance formula
+// Distance formula
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2-lat1) * Math.PI/180;
@@ -70,8 +121,10 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ENABLE LOCATION BUTTON FUNCTION
+// Enable location
 function enableLocation() {
+  const tooltip = document.getElementById("tooltipBox");
+
   if (!navigator.geolocation) {
     alert("Geolocation not supported");
     return;
@@ -88,9 +141,11 @@ function enableLocation() {
     if (distance <= RADIUS) {
       document.getElementById("status").innerText = "✅ Within attendance zone";
       document.getElementById("submitBtn").disabled = false;
+      tooltip.classList.remove("show");
     } else {
       document.getElementById("status").innerText = "❌ Outside allowed area";
       document.getElementById("submitBtn").disabled = true;
+      tooltip.classList.add("show");
     }
 
   }, () => {
@@ -99,7 +154,7 @@ function enableLocation() {
   });
 }
 
-// SUBMIT FORM
+// Submit form
 document.getElementById("form").addEventListener("submit", function(e) {
   e.preventDefault();
 
