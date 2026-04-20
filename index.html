@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Attendance System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+<h2>Attendance Form</h2>
+
+<p id="status">Checking location...</p>
+
+<form id="form">
+  Name: <input type="text" id="name" required><br><br>
+  Semester: <input type="text" id="semester" required><br><br>
+  Subject: <input type="text" id="subject" required><br><br>
+
+  <button type="submit" id="submitBtn" disabled>Submit</button>
+</form>
+
+<script>
+const TARGET_LAT = 27.41;
+const TARGET_LON = 85.32;
+const RADIUS = 100; // meters
+
+const scriptURL = "PASTE_YOUR_SCRIPT_URL";
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*Math.PI/180) *
+            Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2) *
+            Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// LOCATION CHECK
+navigator.geolocation.getCurrentPosition(position => {
+  const lat = position.coords.latitude;
+  const lon = position.coords.longitude;
+
+  const distance = getDistance(lat, lon, TARGET_LAT, TARGET_LON);
+
+  if (distance <= RADIUS) {
+    document.getElementById("status").innerText = "Within allowed range";
+    document.getElementById("submitBtn").disabled = false;
+  } else {
+    document.getElementById("status").innerText = "Outside allowed area";
+  }
+});
+
+// FORM SUBMIT
+document.getElementById("form").addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  const now = new Date();
+
+  const data = {
+    name: document.getElementById("name").value,
+    semester: document.getElementById("semester").value,
+    subject: document.getElementById("subject").value,
+    date: now.toLocaleDateString(),
+    time: now.toLocaleTimeString(),
+    lat: null,
+    lon: null
+  };
+
+  navigator.geolocation.getCurrentPosition(position => {
+    data.lat = position.coords.latitude;
+    data.lon = position.coords.longitude;
+
+    fetch(scriptURL, {
+      method: "POST",
+      body: JSON.stringify(data)
+    })
+    .then(res => res.text())
+    .then(response => {
+      if (response === "DUPLICATE") {
+        alert("Already submitted within 40 minutes");
+      } else {
+        alert("Attendance submitted");
+        document.getElementById("form").reset();
+      }
+    });
+  });
+});
+</script>
+
+</body>
+</html>
