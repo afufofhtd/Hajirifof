@@ -17,6 +17,7 @@
     }
     button {
       padding: 10px 20px;
+      margin: 5px;
       background: green;
       color: white;
       border: none;
@@ -32,7 +33,10 @@
 
 <h2>Faculty of Forestry Attendance</h2>
 
-<p id="status">⚠ Please enable location access</p>
+<p id="status">⚠ Click "Enable Location" to continue</p>
+
+<!-- NEW BUTTON -->
+<button onclick="enableLocation()">Enable Location</button>
 
 <form id="form">
   <input type="text" id="name" placeholder="Name" required><br>
@@ -44,10 +48,13 @@
 
 <script>
 const TARGET_LAT = 27.41;
-const TARGET_LON = 85.32;
-const RADIUS = 100; // meters
+const TARGET_LON = 85.03;
+const RADIUS = 100;
 
-const scriptURL = https://script.google.com/a/macros/afu.edu.np/s/AKfycbzCJwp_FRwrvCPrBbqVXnvHTKxYxGVMugTDCOQA7Eb6v-MkVd2pq0cyVADedjbf3qFu/exec;
+const scriptURL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
+
+let currentLat = null;
+let currentLon = null;
 
 // distance formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -63,32 +70,43 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// REQUIRE LOCATION
-if (!navigator.geolocation) {
-  alert("Location not supported");
-}
-
-// CHECK LOCATION
-navigator.geolocation.getCurrentPosition(position => {
-  const lat = position.coords.latitude;
-  const lon = position.coords.longitude;
-
-  const distance = getDistance(lat, lon, TARGET_LAT, TARGET_LON);
-
-  if (distance <= RADIUS) {
-    document.getElementById("status").innerText = "✅ Within attendance zone";
-    document.getElementById("submitBtn").disabled = false;
-  } else {
-    document.getElementById("status").innerText = "❌ You are outside allowed area";
+// ENABLE LOCATION BUTTON FUNCTION
+function enableLocation() {
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported");
+    return;
   }
 
-}, () => {
-  alert("Location access is required!");
-});
+  document.getElementById("status").innerText = "Checking location...";
+
+  navigator.geolocation.getCurrentPosition(position => {
+    currentLat = position.coords.latitude;
+    currentLon = position.coords.longitude;
+
+    const distance = getDistance(currentLat, currentLon, TARGET_LAT, TARGET_LON);
+
+    if (distance <= RADIUS) {
+      document.getElementById("status").innerText = "✅ Within attendance zone";
+      document.getElementById("submitBtn").disabled = false;
+    } else {
+      document.getElementById("status").innerText = "❌ Outside allowed area";
+      document.getElementById("submitBtn").disabled = true;
+    }
+
+  }, () => {
+    alert("Location permission denied!");
+    document.getElementById("status").innerText = "❌ Location required";
+  });
+}
 
 // SUBMIT FORM
 document.getElementById("form").addEventListener("submit", function(e) {
   e.preventDefault();
+
+  if (!currentLat || !currentLon) {
+    alert("Enable location first!");
+    return;
+  }
 
   const now = new Date();
 
@@ -97,27 +115,25 @@ document.getElementById("form").addEventListener("submit", function(e) {
     semester: document.getElementById("semester").value,
     subject: document.getElementById("subject").value,
     date: now.toLocaleDateString(),
-    time: now.toLocaleTimeString()
+    time: now.toLocaleTimeString(),
+    lat: currentLat,
+    lon: currentLon
   };
 
-  navigator.geolocation.getCurrentPosition(position => {
-    data.lat = position.coords.latitude;
-    data.lon = position.coords.longitude;
-
-    fetch(scriptURL, {
-      method: "POST",
-      body: JSON.stringify(data)
-    })
-    .then(res => res.text())
-    .then(response => {
-      if (response === "DUPLICATE") {
-        alert("⚠ Already marked within 40 minutes");
-      } else {
-        alert("✅ Attendance Submitted");
-        document.getElementById("form").reset();
-      }
-    });
-
+  fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  })
+  .then(res => res.text())
+  .then(response => {
+    if (response === "DUPLICATE") {
+      alert("⚠ Already marked within 40 minutes");
+    } else {
+      alert("✅ Attendance Submitted");
+      document.getElementById("form").reset();
+      document.getElementById("submitBtn").disabled = true;
+      document.getElementById("status").innerText = "⚠ Click 'Enable Location' again";
+    }
   });
 });
 </script>
